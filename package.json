@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "export PATH=\"$HOME/.cargo/bin:$PATH\"; tauri build",
+    "build": "export PATH=\"$HOME/.cargo/bin:$PATH\"; CARGO_TARGET_DIR=src-tauri/target-tauri tauri build",
     "build:win": "export PATH=\"$HOME/.cargo/bin:$PATH\"; tauri build --target x86_64-pc-windows-msvc"
   },
   "devDependencies": {
