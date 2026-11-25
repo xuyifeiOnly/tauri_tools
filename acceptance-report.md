@@ -4,11 +4,17 @@
 
 ## 已验证
 
+### 手动工作流发布 Release（2026-11-25，源码）
+
+- 保留当前双平台构建矩阵，新增 prepare 校验三处源码版本及标签；手动运行使用 `vX.Y.Z`，两个平台成功后发布 Windows exe 和 macOS zip，保留 artifact。
+- 发布 job 独占 `contents: write`；新建标签指定本轮 commit；同版本重跑更新附件，不移动已有标签。未配置签名/公证，不增加平台或架构。
+- 本地验证：`bun test` 15 项、55 条断言通过（含发布元数据 4 项）；`bun run build` 类型检查及构建通过；元数据命令输出版本 0.1.2/标签 v0.1.2；Ruby YAML 解析及 release 依赖/无手动触发限制检查、`git diff --check` 通过。本轮不推送、不触发远端工作流，不代表 GitHub 双平台构建或 Release 发布已实测。
+
 ### Windows 跨平台构建支持（2026-11-25，源码）
 
 - 新增 `src-tauri/src/platform.rs` 集中封装平台差异：SSH/ssh-keygen/ssh-keyscan 路径（Windows 优先 `System32\OpenSSH`，回退 PATH）、`open_url`（macOS `open` / Linux `xdg-open` / Windows `cmd /C start`）、`set_private_file`/`set_private_dir`（unix 设 600/700，Windows 忽略）、`lan_addresses`（macOS `ifconfig` / Linux `ip` / Windows `ipconfig`）、`ssh_config_null`（`/dev/null` vs `NUL`）。
 - `lib.rs`、`config.rs`、`keys.rs`、`runtime.rs`、`browser.rs`、`orphan_ssh.rs` 改为调用平台层；macOS 专属的孤立 SSH 检查用 `cfg!(target_os = "macos")` 限定，其他平台跳过，避免 Windows 连接被“不支持”错误阻断。unix 专属测试（`/bin/kill`、`/bin/sleep`、`PermissionsExt`、符号链接）按 `cfg(unix)` 隔离。
-- `tauri.conf.json` 的 `bundle.targets` 改为 `all`，图标增加 `icons/icon.ico`（由 `tauri icon` 生成后仅保留 ico）。新增 `.github/workflows/build.yml`：`windows-latest` 构建 NSIS 安装包，`macos-latest` 构建 `.app`，上传 artifact。
+- `tauri.conf.json` 的 `bundle.targets` 改为 `all`，图标增加 `icons/icon.ico`（由 `tauri icon` 生成后仅保留 ico）。新增 `.github/workflows/build.yml`：`windows-latest` 构建 NSIS 安装包、`macos-latest` 构建 `.app` 并打包为 zip，统一发布至 Release（详见上文“手动工作流发布 Release”）。
 - 验证：`cargo check`/`cargo test`（macOS）25 项通过；`bun run build` 类型检查与构建通过；`bun test` 11 项通过；工作流 YAML 通过 `YAML.load_file` 校验。
 - 未覆盖：Windows 原生编译/运行未在本机验证（macOS 无法交叉编译 `ring`），需 GitHub Actions 或 Windows 机器实测；Windows 下 OpenSSH 路径、托盘、自启动、局域网访问均未实测。
 

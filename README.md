@@ -27,8 +27,10 @@ bun run tauri dev
 
 Windows 安装包（`.exe`）**不能在 macOS 上交叉编译**：`ring` 等 C 依赖需要 MSVC 工具链和 Windows SDK，macOS 上只能编译到链接阶段前。请使用仓库自带的 GitHub Actions 工作流 `.github/workflows/build.yml`，在 `windows-latest` 原生 runner 上构建 NSIS 安装包：
 
-- 手动触发：仓库 **Actions → build → Run workflow**；或推送 `v*` 标签自动构建。
-- 产物：`suixiang-windows` artifact，即 `src-tauri/target/release/bundle/nsis/*.exe`。
+- 推送 `v*` 标签（如 `v0.1.2`）自动构建，并把安装包**直接附加到同名 GitHub Release**：Windows 为 `随享_<版本>_x64-setup.exe`，macOS 为 `随享-macos.zip`。若 Release 尚不存在会自动创建。
+- 手动触发（**Actions → build → Run workflow**）同样发布 Release：选择待构建分支，使用该分支源码版本号生成标签（当前为 `v0.1.2`），两个平台都构建成功后上传安装包，到仓库 **Releases → 对应版本 → Assets** 下载。Actions artifact 仍保留。
+- `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 版本必须一致，推送标签也必须与源码版本一致；工作流不自动递增版本。相同版本重跑会更新同名附件，发布新版本请先更新源码版本。已有标签不会移动，建议仅重跑同一提交；新版本使用新版本号。
+- 工作流通过内置 `GITHUB_TOKEN` 发布，无需额外密钥；只有发布 job 具有 `contents: write` 权限。构建包未配置正式代码签名/macOS 公证，macOS 仅当前 runner 架构，不是通用包。
 - 本地 Windows 也可直接 `bun install && bunx tauri build --bundles nsis`。
 
 跨平台适配：SSH/ssh-keygen/ssh-keyscan 路径、打开浏览器、私密权限、局域网地址枚举集中在 `src-tauri/src/platform.rs`；macOS 专属的孤立 SSH 检查在 Windows/Linux 上自动跳过。Windows 需系统自带 OpenSSH 客户端（Windows 10/11 默认已安装）。

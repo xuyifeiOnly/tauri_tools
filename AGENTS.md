@@ -125,6 +125,8 @@
 
 ## 构建与验证命令
 
+- GitHub `.github/workflows/build.yml`：手动 Run workflow 与推送 `v*` 标签均在双平台构建成功后发布 Release（Windows exe/macOS zip），同时保留 artifact。`scripts/release-metadata.ts` 校验三处版本一致与标签匹配，手动以源码版本生成标签，不自动增版；同版本重跑更新附件但不移动已有标签。只有 release job 可写仓库。未配置签名/公证，远端构建发布尚未实测；本地 `bun test tests/release-metadata.test.ts` 回归。
+
 - `scripts/service.sh`：Linux/root非交互准备脚本，参数集中顶部，账号/可选密码/公钥预填后直接运行；禁止填入私钥或提交真实密码。默认mac-tunnel；目标配置标记存在跳过创建，已有账号无标记拒绝接管。无yes确认，无独立--check。Nginx仅输出片段，端到端验证须Mac连接后核对回环及公网健康实例标识。项目开发时不直接在真实服务器执行。`python3 scripts/test_service.py`为本地3项无部署检查，不能替代Linux/OpenSSH7.4验收。
 
 - 安装覆盖固定的 `~/Applications/随享.app`，不保留旧版或ZIP备份；仅替换期间临时保留旧包以便失败恢复，成功即删除。禁止在Applications生成备份.app以免Launchpad重复。安装成功撤销并移除debug/release及应用目录内核验身份的重复.app，再注册安装版。此前归档的ZIP不自动清理。

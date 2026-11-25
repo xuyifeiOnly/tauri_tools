@@ -6,3 +6,6 @@
 ```bash
 cargo clean --manifest-path src-tauri/Cargo.toml
 ```
+
+# 线上自动打包流程
+![](./images/image.tiff)
