@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Mac Tunnel</title>
+  <rect x="32" y="32" width="448" height="448" rx="104" fill="#183B73"/>
+  <path d="M98 203c0-16 13-29 29-29h91c10 0 16 3 23 10l21 21h98c16 0 29 13 29 29v134c0 19-15 34-34 34H132c-19 0-34-15-34-34V203Z" fill="#E8F3FF"/>
+  <path d="M98 244h291v124c0 19-15 34-34 34H132c-19 0-34-15-34-34V244Z" fill="#92C8F1"/>
+  <path d="M161 315h97c35 0 55-18 55-52v-37" fill="none" stroke="#183B73" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m269 269 44-44 44 44" fill="none" stroke="#183B73" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="161" cy="315" r="17" fill="#183B73"/>
+</svg>
