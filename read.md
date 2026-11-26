@@ -17,3 +17,8 @@ cargo clean --manifest-path src-tauri/Cargo.toml
 sudo grep -nEi '^[[:space:]]*(Match|AllowUsers|AllowTcpForwarding|PermitListen|DisableForwarding)' \
   /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
+
+
+# 注意点
+- 隧道账号需要管理员提供，不能随便写，和服务器的保持一致
+-

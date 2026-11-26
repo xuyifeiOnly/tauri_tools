@@ -2,7 +2,9 @@ mod browser;
 mod config;
 mod deployment;
 mod files;
+mod image_preview;
 mod keys;
+mod markdown;
 mod orphan_ssh;
 mod platform;
 mod runtime;
@@ -297,8 +299,9 @@ pub fn run() {
             let menu = tauri::menu::Menu::with_items(app, &[&show, &quit])?;
             tauri::tray::TrayIconBuilder::new()
                 .icon(tauri::image::Image::from_bytes(include_bytes!(
-                    "../icons/icon.png"
+                    "../icons/tray-template.png"
                 ))?)
+                .icon_as_template(true)
                 .tooltip("随享")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {

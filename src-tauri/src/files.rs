@@ -14,6 +14,10 @@ use std::{
 };
 use tower_http::services::ServeFile;
 
+#[cfg(test)]
+#[path = "markdown_http_tests.rs"]
+mod markdown_http_tests;
+
 pub fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -262,10 +266,46 @@ async fn deliver(State(state): State<Arc<(Config, String)>>, r: Request) -> Resp
             );
         }
     }
+    let markdown = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|s| s.eq_ignore_ascii_case("md") || s.eq_ignore_ascii_case("markdown"));
+    let query = r.uri().query().unwrap_or("");
+    let download = query.split('&').any(|s| s == "download=1");
+    let raw_source = query.split('&').any(|s| s == "raw=1");
+    let tiff = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|s| s.eq_ignore_ascii_case("tif") || s.eq_ignore_ascii_case("tiff"));
+    if tiff && !download && !raw_source {
+        return crate::image_preview::respond(&path, head).await;
+    }
+    if markdown && !download && !raw_source {
+        return crate::markdown::respond(&path, head).await;
+    }
+    let disposition = if (markdown || tiff) && download {
+        let filename = path.file_name().unwrap_or_default().to_string_lossy();
+        Some(format!(
+            "attachment; filename=\"download\"; filename*=UTF-8''{}",
+            percent_encoding::utf8_percent_encode(&filename, percent_encoding::NON_ALPHANUMERIC)
+        ))
+    } else {
+        None
+    };
     let mut service = ServeFile::new(path);
     match service.try_call(r).await {
         Ok(res) => {
             let mut res = res.map(Body::new);
+            if markdown {
+                res.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    "text/plain; charset=utf-8".parse().unwrap(),
+                );
+            }
+            if let Some(value) = disposition {
+                res.headers_mut()
+                    .insert(header::CONTENT_DISPOSITION, value.parse().unwrap());
+            }
             res.headers_mut()
                 .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
             res.headers_mut()

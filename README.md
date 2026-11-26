@@ -20,7 +20,7 @@ macOS 源码补充 Dock 图标点击的 `RunEvent::Reopen`，恢复隐藏/最小
 
 macOS 本地目录共享客户端，Tauri 2 + Vue 3 + Rust。当前为首个开发预览版，尚非正式安全审计或公网验收版本。
 
-应用图标以文件夹和向外的连接箭头表达目录通过隧道共享。可编辑源稿在 `src-tauri/icons/mac-tunnel.svg`；构建使用同目录的 PNG 和 `icon.icns`，侧栏与菜单栏使用同一设计。
+应用图标以文件夹和向外的连接箭头表达目录通过隧道共享。Dock 与侧栏使用 `src-tauri/icons/mac-tunnel.svg` 生成的彩色 PNG/ICNS；macOS 菜单栏单独使用透明单色的 `tray-template.svg` / `tray-template.png`，并启用模板图标，使系统按菜单栏外观自动显示白色或深色。
 
 ## 运行
 
@@ -47,6 +47,16 @@ Windows 安装包（`.exe`）**不能在 macOS 上交叉编译**：`ring` 等 C 
 跨平台适配：SSH/ssh-keygen/ssh-keyscan 路径、打开浏览器、私密权限、局域网地址枚举集中在 `src-tauri/src/platform.rs`；macOS 专属的孤立 SSH 检查在 Windows/Linux 上自动跳过。Windows 需系统自带 OpenSSH 客户端（Windows 10/11 默认已安装）。
 
 ## 使用
+
+### Markdown 阅读预览（源码，需更新安装生效）
+
+本地共享的 `.tif/.tiff` 图片默认由服务端转换为 PNG 预览，Markdown 中的原图片路径无需修改，也不会覆盖原 TIFF。`图片地址?raw=1` 返回原文件，`图片地址?download=1` 下载原 TIFF（支持 Range）。多页仅展示第一页；不转换远程 TIFF。输入上限16MiB、宽高各8192、总像素1600万、解码分配预算128MiB（库尽力限制，非进程硬上限），最多两个并发转换；超限413、损坏/不支持422、繁忙503。转换结果不落盘、不缓存，所有模式沿用目录权限。完整应用需重新打包安装生效。
+
+共享 `.md` / `.markdown` 链接默认显示阅读页面，支持标题、表格、任务列表、删除线、图片及代码语法高亮；扩展名大小写不敏感。相对图片按文档目录解析，兼容公网前缀，仍需满足所属共享目录的访问权限。支持 HTTP/HTTPS 远程图片，但不代理远程资源，HTTPS 页面中的 HTTP 图片可能被浏览器拦截。
+
+阅读页提供“查看源码”（`?raw=1`）及“下载原文件”（`?download=1`），不修改磁盘文件；原文件模式仍支持 Range。排版、解析与代码高亮均随应用内置，不依赖 CDN，自动适配系统亮暗与手机。使用 pulldown-cmark、syntect、ammonia，移除文档原始 HTML，清洗危险链接并设置预览专用 CSP；不支持文档脚本、内嵌 HTML 图片、Mermaid 或公式。请使用标准 Markdown 图片语法 `![说明](images/photo.png)`。
+
+UTF-8 文件预览上限 2 MiB；超限/其他编码提供说明及原文件入口。单个代码块超过 64 KiB 时按普通代码显示，未知语言同样不高亮。可运行 `cargo run --manifest-path src-tauri/Cargo.toml --example markdown_preview` 启动独立临时目录、随机回环端口的验证服务（Ctrl+C 停止），不连接 SSH，不操作现有共享。
 
 ### Windows SSH 后台运行与重连排查
 

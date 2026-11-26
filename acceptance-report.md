@@ -4,6 +4,24 @@
 
 ## 已验证
 
+### TIFF 图片自动转换（2026-11-26，源码）
+
+- 原问题：实际`ceshi.md`引用`./images/image.tiff`，原服务200/image-tiff，但Chromium无法解码、naturalWidth=0；非路径错误。
+- 新增image_preview.rs及image TIFF/PNG依赖，默认本地TIFF返回PNG第一帧，原图/Markdown不变；raw/download保留原字节及Range。路径/认证/LAN检查先于转换，受输入/尺寸/解码预算/并发限制；不代理远程图片。解码内存预算为库的尽力限制，非硬进程内存隔离；原有safe_path TOCTOU未解决。
+- Rust串行35项通过（新增4项，覆盖PNG解码尺寸、损坏/文件与尺寸上限、繁忙503、原图及Range、HEAD、编码路径/前缀、401/LAN/符号链接）；bun18项63断言及类型检查/构建通过。
+- Ego Lite TaskSpace3/p1，独立`http://127.0.0.1:55073/my_mac/docs/ceshi%2Emd`，显式只读使用`/Users/xuyifei_coco/Documents/ssh_container`：图片成功655×312，响应image/png；无前缀`/docs/ceshi.md`也加载成功。1200×707截图`/private/var/folders/gx/qmlmrzyn4kb33r1zm1bzkwbw0000gn/T/opencode/markdown-tiff-fixed.png`已目视检查；TaskSpace已finish，独立服务已SIGINT优雅停止，未改用户文件。
+- 当前20005/已安装应用未更新；真实公网/跨设备LAN、多页/各类专业TIFF色彩及Windows实机未验收。不改版本、不安装、不推送，保留用户同期版本/托盘图标等修改。
+
+- 菜单栏图标修正（2026-11-26）：针对顶部蓝色小方块，新增 64×64 透明单色 `tray-template.png` 和 SVG 源稿，托盘改用该资源并设置 `icon_as_template(true)`。Tauri macOS 实现将其按 18pt 高显示，系统可在深色菜单栏绘为白色；`cargo check --manifest-path src-tauri/Cargo.toml` 通过，PNG 角点透明度为 0。尚未安装新包、未在 macOS 菜单栏实际截图验收。
+
+### Markdown 默认阅读预览（2026-11-26，源码）
+
+- `.md/.markdown` 原链接默认服务端渲染，图片、代码高亮、表格/任务列表/删除线；内置 pulldown-cmark/syntect/ammonia，无 CDN 或客户端脚本。查看源码及下载原文件不改变磁盘内容。UTF-8/2MiB 预览上限，单代码块64KiB高亮上限，原始HTML移除，危险协议清洗，预览专用CSP。
+- Rust串行31项全通过（新增5项Markdown/HTTP测试，覆盖编码/大小写路径、本地及公网前缀、相对图片、HEAD、预览忽略Range、下载Range、raw、认证拒绝、LAN拒绝、路径穿越、超限/非UTF-8及危险内容）。`cargo check --examples`、`cargo fmt`、`bun test`18项63断言、`bun run build`及`git diff --check`通过。
+- Ego Lite TaskSpace **1** / p1，独立example服务 `http://127.0.0.1:57985/my_mac/docs/测试.md`，临时目录/随机回环端口，无SSH。页面标题、图片实际自然宽720、相对含空格图片在公网前缀下加载通过；Rust/JavaScript多色高亮通过；点击源码显示纯文本、点击下载得到`测试.md`且failure=null。桌面1200×707亮色、390×844暗色截图检查通过；手机scrollWidth=390，长代码仅块内滚动，图片328px，表格/禁用勾选任务列表正常。
+- 截图位于 `/private/var/folders/gx/qmlmrzyn4kb33r1zm1bzkwbw0000gn/T/opencode/`：`markdown-light.png`、`markdown-dark-mobile.png`、`markdown-table-mobile.png`；下载证据`markdown-downloaded.md`。TaskSpace已finish，独立测试服务已Ctrl+C停止。
+- 未覆盖：当前安装应用/20005实际共享目录未更新，未读取或修改用户共享文件；真实公网、跨设备LAN、远程图片网络加载、密码弹窗下图片加载未做浏览器实测（既有HTTP认证测试覆盖子资源要求认证）。未安装、未签名/公证、未推送部署。原始HTML图片不支持，需标准Markdown图片语法。现有safe_path TOCTOU风险未由本次解决。
+
 ### 0.1.4 macOS 下载包签名无效（2026-11-26）
 
 - 只读实测`/Applications/随享.app`为0.1.4/arm64，与本机arm64匹配；codesign verify及spctl均失败：`code has no resources but signature indicates they must be present`。签名显示adhoc/linker-signed、Info.plist未绑定、Sealed Resources=none，存在Chrome quarantine标记。不能仅归因于ZIP或泛称未公证。
