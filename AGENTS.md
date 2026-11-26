@@ -1,6 +1,6 @@
 # 随享项目开发指引
 
-- 应用已更名“随享”，0.1.2安装到`~/Applications/随享.app`；内部identifier `cn.rutang.mac-tunnel`、可执行文件mac-tunnel、数据位置均保持兼容。旧文档Mac Tunnel构建路径仅作历史，不再代表当前安装产物。
+- 应用已更名“随享”，当前系统目录`/Applications/随享.app`为0.1.4；旧用户目录0.1.2已按标识核验并删除。内部identifier `cn.rutang.mac-tunnel`、可执行文件mac-tunnel、数据位置均保持兼容。旧文档安装路径仅作历史，不再代表当前安装产物。
 - `scripts/app_bundles.py`在限定目录按Info.plist核验身份、拒绝危险符号链接并去重；安装成功后真正删除构建.app（不是只lsregister注销），避免再次扫描。`python3 scripts/test_app_install.py`有6项回归。首次安装及再次同版本覆盖已验收：仅随享.app和一条LaunchServices注册。直接Tauri打包/--no-install仍可能产生副本，不保证任意手工复制；不能宣称启动台视觉已验收。
 
 本文件用于后续开发快速恢复上下文。更新功能或规划后，请同步维护本文件、README 和验收记录；不要把规划当成已完成功能。
@@ -133,6 +133,8 @@
 
 ## 构建与验证命令
 
+- 0.1.4系统安装只读诊断：arm64匹配，codesign/spctl报code has no resources but signature indicates they must be present，仅linker adhoc签名、无资源封装，带Chrome隔离标记。GitHub macOS打ZIP前增加完整bundle临时签名/严格验签、解压回读验签；未远端执行，不等同Developer ID/公证，不擅自清除隔离或修改安装包。
+
 - 仅同步三处版本用 `bun run version:bump`（scripts/bump-version.ts），默认patch+1，支持 `--version X.Y.Z`/`--dry-run`；不打包、不安装、不发布，Cargo.lock由后续Cargo更新。已先增版再本地打包时用package.sh --keep-version避免加两次。
 
 - Windows Release 附件现为 `suixiang_<版本>_windows_x64.zip`，内含原始 NSIS exe，解压后安装，非便携版；上传前 PowerShell 解压回读并校验 SHA-256。仅上传 ZIP，不删除历史 Release 已有 exe；macOS zip不变。Windows归档实测待GitHub runner执行，不把ZIP封装当作损坏根因修复。
@@ -141,9 +143,9 @@
 
 - `scripts/service.sh`：Linux/root非交互准备脚本，参数集中顶部，账号/可选密码/公钥预填后直接运行；禁止填入私钥或提交真实密码。默认mac-tunnel；目标配置标记存在跳过创建，已有账号无标记拒绝接管。无yes确认，无独立--check。Nginx仅输出片段，端到端验证须Mac连接后核对回环及公网健康实例标识。项目开发时不直接在真实服务器执行。`python3 scripts/test_service.py`为本地3项无部署检查，不能替代Linux/OpenSSH7.4验收。
 
-- 安装覆盖固定的 `~/Applications/随享.app`，不保留旧版或ZIP备份；仅替换期间临时保留旧包以便失败恢复，成功即删除。禁止在Applications生成备份.app以免Launchpad重复。安装成功撤销并移除debug/release及应用目录内核验身份的重复.app，再注册安装版。此前归档的ZIP不自动清理。
+- 安装覆盖固定的 `/Applications/随享.app`，不保留旧版或ZIP备份；仅替换期间临时保留旧包以便失败恢复，成功即删除。禁止在Applications生成备份.app以免Launchpad重复。安装成功撤销并移除debug/release及应用目录内核验身份的重复.app，再注册安装版。此前归档的ZIP不自动清理。
 
-- 本机测试脚本 `scripts/app_install.sh`：默认patch版本+1、release打包并安装到 `~/Applications`；支持 `--version X.Y.Z`、`--keep-version`、`--debug`、`--release`、`--no-install`、`--install-dir`、`--open`、`--dry-run`。
+- 本机测试脚本 `scripts/app_install.sh`：默认patch版本+1、release打包并安装到 `/Applications`；支持 `--version X.Y.Z`、`--keep-version`、`--debug`、`--release`、`--no-install`、`--install-dir`、`--open`、`--dry-run`。无系统目录写权限时报错，不自动sudo或回退用户目录；仍扫描旧用户Applications核验去重。
 - 版本同步与构建统一由 `scripts/package.sh` 负责（`bun run package` 或直接执行），默认 release 且默认 patch+1；只有显式 `--debug` 才生成 debug 包。安装脚本复用该入口，避免一次操作重复递增版本；同步三处版本，构建失败保留新版本。打包暂存成功后通过应用标识请求旧客户端退出，最多15秒，失败则中止覆盖；成功不保留旧包，不强杀、不清除应用数据、不操作独立手工隧道。客户端退出会中断其托管服务，运行前注意版本变更与目标安装覆盖。
 
 ```bash

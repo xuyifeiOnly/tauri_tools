@@ -4,6 +4,16 @@
 
 ## 已验证
 
+### 0.1.4 macOS 下载包签名无效（2026-11-26）
+
+- 只读实测`/Applications/随享.app`为0.1.4/arm64，与本机arm64匹配；codesign verify及spctl均失败：`code has no resources but signature indicates they must be present`。签名显示adhoc/linker-signed、Info.plist未绑定、Sealed Resources=none，存在Chrome quarantine标记。不能仅归因于ZIP或泛称未公证。
+- GitHub macOS归档前新增完整bundle临时签名和严格验证，ZIP解压回读后再次严格验证；不是Developer ID签名/公证，仍可能被Gatekeeper拒绝。工作流尚未远端执行，当前安装包未修改、未移除隔离标记、未启动。
+
+### 系统 Applications 统一安装（2026-11-26）
+
+- 用户授权后核验两份应用identifier及版本：删除`~/Applications/随享.app`旧0.1.2并注销注册，保留并重新注册`/Applications/随享.app`0.1.4。处理前未检测到客户端主进程，不操作应用数据、密钥或共享目录。
+- app_install.sh默认安装目录改为/Applications，保留--install-dir及用户旧目录去重扫描；Bash语法、6项安装安全回归、--dry-run --keep-version通过，预览目标/Applications/随享.app，无实际打包/覆盖安装。启动台视觉刷新未验收，不重置Launchpad或重启Dock。
+
 ### macOS Dock 恢复窗口（2026-11-26，源码）
 
 - 补充macOS `RunEvent::Reopen`调用show_main_window，对Dock重新打开恢复隐藏/最小化窗口并聚焦；不新建窗口或重启共享。此前仅处理托盘打开与单实例第二进程，缺少此事件。

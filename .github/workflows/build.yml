@@ -79,8 +79,15 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: |
           cd src-tauri/target/release/bundle/macos
+          # 修复仅有 linker 签名的可执行文件：为完整 bundle 封装资源签名。
+          # 临时签名不代表 Developer ID 签名或 Apple 公证。
+          codesign --force --deep --sign - "随享.app"
+          codesign --verify --deep --strict --verbose=2 "随享.app"
           # ditto 保留 .app 的符号链接与可执行权限。
           ditto -c -k --sequesterRsrc --keepParent "随享.app" "随享-macos.zip"
+          check_dir=$(mktemp -d "$RUNNER_TEMP/suixiang-zip-check.XXXXXX")
+          ditto -x -k "随享-macos.zip" "$check_dir"
+          codesign --verify --deep --strict --verbose=2 "$check_dir/随享.app"
 
       - name: Package Windows installer as ZIP
         if: matrix.platform == 'windows-latest'

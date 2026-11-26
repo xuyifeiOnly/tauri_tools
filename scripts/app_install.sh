@@ -9,13 +9,13 @@ VERSION=''
 INSTALL=true
 LAUNCH=false
 DRY_RUN=false
-INSTALL_DIR="$HOME/Applications"
+INSTALL_DIR="/Applications"
 
 usage() {
   cat <<'HELP'
 用法：./scripts/app_install.sh [选项]
 
-默认：补丁版本号 +1，构建 release .app，安装到 ~/Applications；不自动启动。
+默认：补丁版本号 +1，构建 release .app，安装到 /Applications；不自动启动。
   --version X.Y.Z     指定版本号（同步 package.json、Tauri、Cargo）
   --bump TYPE         major / minor / patch（默认 patch）
   --keep-version      保持当前版本号

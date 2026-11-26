@@ -6,11 +6,13 @@
 
 ## 安装与升级
 
+GitHub macOS ZIP打包前会对完整.app进行临时签名并严格校验，解压回读后再次验签，避免仅有linker签名的无效应用包。临时签名不是Developer ID签名或Apple公证，不能保证下载后Gatekeeper放行；0.1.4已发现完整bundle签名无效，需使用修正工作流重新构建，不能将“已损坏”一概当作下载不完整。
+
 macOS 源码补充 Dock 图标点击的 `RunEvent::Reopen`，恢复隐藏/最小化的已有主窗口并聚焦，不创建新窗口或重启共享；需更新安装生效，Dock 原生点击仍待验收。
 
 源码已加入应用级单实例保护（Tauri single-instance）：重复启动会唤起已有主窗口，隐藏窗口会显示、最小化窗口会还原并聚焦，不再创建第二套配置/托盘/服务。托盘“打开随享”复用相同行为。需更新安装后生效；首次升级前请从各旧实例托盘正常退出，旧版本已启动的多个实例不由新版本自动清理。单实例不代表任务管理器中只有一个进程：WebView 和 SSH 子进程仍属正常。Windows 原生多开/唤起行为仍待实机验收。
 
-运行`./scripts/app_install.sh`构建安装，默认patch版本+1；重复安装相同版本使用`--keep-version`。固定安装到`~/Applications/随享.app`。成功后注销并移除本项目debug/release打包副本，以及应用目录中经标识核验的旧名/重复应用，只注册安装版，不留下可被系统再次扫描的构建.app或永久备份。临时替换备份成功即删除；清理失败明确报错。可用`python3 scripts/test_app_install.py`运行安全清理回归。
+运行`./scripts/app_install.sh`构建安装，默认patch版本+1；重复安装相同版本使用`--keep-version`。固定安装到`/Applications/随享.app`。成功后注销并移除本项目debug/release打包副本，以及应用目录中经标识核验的旧名/重复应用，只注册安装版，不留下可被系统再次扫描的构建.app或永久备份。临时替换备份成功即删除；清理失败明确报错。可用`python3 scripts/test_app_install.py`运行安全清理回归。
 
 `--no-install`或直接调用Tauri打包只生成构建产物，不执行安装后去重，因此可能重新出现同标识副本；日常升级请使用安装脚本。不会扫描任意磁盘位置，也不保证清理由用户手动复制到其他位置的应用。
 
@@ -103,7 +105,7 @@ Windows 安装包（`.exe`）**不能在 macOS 上交叉编译**：`ring` 等 C 
 ### 一键打包安装（本机测试）
 
 ```bash
-./scripts/app_install.sh                     # 补丁版本 +1、release打包、安装到 ~/Applications
+./scripts/app_install.sh                     # 补丁版本 +1、release打包、安装到 /Applications
 ./scripts/app_install.sh --version 0.2.0      # 指定版本，其他行为同上
 ./scripts/app_install.sh --keep-version      # 保持版本，重新构建安装
 ./scripts/app_install.sh --debug             # 改为 debug 构建安装
@@ -116,7 +118,7 @@ Windows 安装包（`.exe`）**不能在 macOS 上交叉编译**：`ring` 等 C 
 
 脚本可从任意工作目录执行，依赖 Bun、Python 3、Rust 和已安装的项目依赖。版本同步修改 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`；构建时 Cargo 更新锁文件中的本项目版本。仅接受稳定版 `X.Y.Z`；构建失败保留已更新版本，重试用 `--keep-version`。版本同步和构建统一由 `scripts/package.sh` 完成，安装脚本只负责安装，避免一次操作重复递增版本。
 
-打包并暂存成功后，脚本通过应用标识请求旧客户端退出，最多等待15秒；退出失败或仍有客户端进程时中止覆盖，不使用强杀。退出会中断客户端托管的共享服务，不影响独立手工隧道。默认安装到 `~/Applications/Mac Tunnel.app`（可用 `--install-dir /绝对路径` 更改），覆盖成功后不保留旧应用，不清理配置、密钥或共享目录。默认不启动，可选 `--open`。debug/release 均为本机测试构建，不等于完成 Developer ID 签名/公证。
+打包并暂存成功后，脚本通过应用标识请求旧客户端退出，最多等待15秒；退出失败或仍有客户端进程时中止覆盖，不使用强杀。退出会中断客户端托管的共享服务，不影响独立手工隧道。默认安装到 `/Applications/随享.app`（可用 `--install-dir /绝对路径` 更改），覆盖成功后不保留旧应用，不清理配置、密钥或共享目录。默认不启动，可选 `--open`。debug/release 均为本机测试构建，不等于完成 Developer ID 签名/公证。
 
 1. 本地访问无需服务器或SSH密钥：添加目录后进入概览，有未保存修改时直接点击“保存并启动本地服务”，先保存成功再启动，无需绕去配置页。保存失败保留修改且不启动；操作中显示保存/启动阶段并防止重复点击。服务运行时禁用重复启动，若有修改可点击“保存配置并停止现有服务”，再手动启动。
 2. 默认入口 `http://127.0.0.1:20005/`；子目录如 `/docs/`。只读，不支持上传、删除或执行。
@@ -136,7 +138,7 @@ Windows 安装包（`.exe`）**不能在 macOS 上交叉编译**：`ring` 等 C 
 
 ## 验证
 
-覆盖安装只保留固定位置 `~/Applications/Mac Tunnel.app`，不保留旧版或ZIP备份；仅在替换期间暂存旧包用于失败恢复，成功后立即删除。脚本安装成功后撤销项目debug/release开发包的应用注册，减少启动台重复图标；不重置系统启动台数据库。此前已生成的压缩备份不自动清理。
+覆盖安装只保留固定位置 `/Applications/随享.app`，不保留旧版或ZIP备份；仅在替换期间暂存旧包用于失败恢复，成功后立即删除。脚本安装成功后撤销项目debug/release开发包的应用注册，减少启动台重复图标；不重置系统启动台数据库。此前已生成的压缩备份不自动清理。
 
 ```bash
 bun run build
