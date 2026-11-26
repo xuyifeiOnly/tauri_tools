@@ -71,6 +71,10 @@ jobs:
         # beforeBuildCommand 会自动执行 bun run build。
         run: bunx tauri build --bundles ${{ matrix.bundle }}
 
+      - name: Test Windows background processes
+        if: matrix.platform == 'windows-latest'
+        run: cargo test --manifest-path src-tauri/Cargo.toml platform::windows_process_tests
+
       - name: Package macOS app
         if: matrix.platform == 'macos-latest'
         run: |

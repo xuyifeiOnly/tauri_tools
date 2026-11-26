@@ -58,6 +58,8 @@
 
 ### 重要运行语义
 
+- Windows 子进程统一通过 platform::background_command/background_async_command 设置 CREATE_NO_WINDOW 和默认 stdin null，覆盖 SSH、keygen/keyscan、ipconfig、打开地址 cmd；扫描指纹管道显式覆盖 stdin。SSH 退出记录退出码，远端转发失败提示多设备端口冲突，不自动停止其他设备。macOS Rust26项、bun15项及构建通过；Windows专属两项进程回归接入构建工作流，尚未在Windows执行，不宣称断线根因或原生弹窗验收完成。
+
 - `orphan_ssh.rs`为连接前孤立SSH恢复：macOS sysctl读真实argv，必须完整匹配实际Command（包括专用密钥/known_hosts及全部参数）；同用户且PPID1才TERM，信号前复核身份/argv，最多等5秒；其他父进程报冲突，失败停止连接。Runtime首次spawn前执行，测试假程序跳过。身份取UID/PPID/lstart，不包含易变stat。当前只源码与22项Rust回归，未安装/未真实清理验收，禁止宣称可清理任意端口占用。
 
 - 概览本地入口必须复用openAddress/open_url，禁止仅target=_blank（桌面WebView可能无外部窗口响应）。2026-11-25清理确认的升级前孤立64677后，当前随享自动重连，公网实例匹配；不是新版退出泄漏证据。链接源码修复尚未覆盖安装，原生点击仍待验收。

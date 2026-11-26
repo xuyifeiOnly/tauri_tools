@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::{path::Path, process::Command};
+use std::path::Path;
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyInfo {
@@ -20,7 +20,7 @@ pub fn inspect(dir: &Path, id: &str) -> Result<KeyInfo, String> {
     if !p.is_file() {
         return Err("所选密钥不存在，请在连接配置中重新选择电脑私钥".into());
     }
-    let o = Command::new(crate::platform::ssh_keygen())
+    let o = crate::platform::background_command(crate::platform::ssh_keygen())
         .args(["-y", "-P", ""])
         .arg("-f")
         .arg(&p)
@@ -31,7 +31,7 @@ pub fn inspect(dir: &Path, id: &str) -> Result<KeyInfo, String> {
     }
     let public_key = String::from_utf8_lossy(&o.stdout).trim().to_string();
     std::fs::write(p.with_extension("pub"), &public_key).map_err(|e| e.to_string())?;
-    let out = Command::new(crate::platform::ssh_keygen())
+    let out = crate::platform::background_command(crate::platform::ssh_keygen())
         .arg("-lf")
         .arg(p.with_extension("pub"))
         .output()
@@ -92,7 +92,7 @@ pub fn create(dir: &Path, source: Option<String>) -> Result<KeyInfo, String> {
     if let Some(source) = source {
         std::fs::copy(source, &p).map_err(|e| e.to_string())?;
     } else {
-        let o = Command::new(crate::platform::ssh_keygen())
+        let o = crate::platform::background_command(crate::platform::ssh_keygen())
             .args(["-t", "ed25519", "-N", "", "-C", "mac-tunnel", "-f"])
             .arg(&p)
             .output()

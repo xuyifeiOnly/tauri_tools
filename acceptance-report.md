@@ -4,6 +4,13 @@
 
 ## 已验证
 
+### Windows SSH 控制台弹出与退出诊断（2026-11-26，源码）
+
+- 确认原 SSH 启动未设置 Windows 无控制台标志；统一后台命令构造器设置 CREATE_NO_WINDOW、stdin null，覆盖异步 SSH/指纹扫描、同步密钥及 Windows 网络/打开地址工具。保留 stderr 捕获、严格主机校验、心跳和退避，不改真实服务器或现有隧道。
+- 退出日志增加进程退出码；远端端口绑定失败提示其他设备/旧隧道可能占用，不自动杀其他设备。截图不能确认实际断线原因，仍需 Windows 日志。
+- macOS `cargo test` 26项通过（新增退出255/远端转发失败日志回归）；`bun test`15项通过；`bun run build`类型检查与构建通过；cargo fmt完成。
+- Windows 专属两项测试覆盖 CREATE_NO_WINDOW 下无控制台、stderr及异步退出码，已接入 GitHub Windows 构建 job，但本轮未执行Windows测试/打包/安装或真实SSH连接，不能宣称Windows稳定性已验收。无UI改动，未进行页面回归；未推送、发布或安装。
+
 ### 手动工作流发布 Release（2026-11-25，源码）
 
 - 保留当前双平台构建矩阵，新增 prepare 校验三处源码版本及标签；手动运行使用 `vX.Y.Z`，两个平台成功后发布 Windows exe 和 macOS zip，保留 artifact。

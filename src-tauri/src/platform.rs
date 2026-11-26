@@ -8,6 +8,47 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
+/// 后台工具统一禁止 Windows 创建控制台；不隐藏错误，调用方仍捕获 stderr。
+pub fn background_command(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    command.stdin(std::process::Stdio::null());
+    command
+}
+
+pub fn background_async_command(program: impl AsRef<std::ffi::OsStr>) -> tokio::process::Command {
+    tokio::process::Command::from(background_command(program))
+}
+
+#[cfg(all(test, windows))]
+mod windows_process_tests {
+    use super::*;
+
+    #[test]
+    fn background_process_has_no_console_and_captures_errors() {
+        let output = background_command("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "Add-Type -Name Native -Namespace Test -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow();'; if ([Test.Native]::GetConsoleWindow() -ne [IntPtr]::Zero) { exit 9 }; [Console]::Error.WriteLine('captured'); exit 7"])
+            .output().unwrap();
+        assert_eq!(output.status.code(), Some(7));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("captured"));
+    }
+
+    #[tokio::test]
+    async fn async_background_process_retains_exit_code() {
+        let output = background_async_command("cmd.exe")
+            .args(["/C", "exit", "7"])
+            .output()
+            .await
+            .unwrap();
+        assert_eq!(output.status.code(), Some(7));
+    }
+}
+
 /// 系统 OpenSSH 客户端。macOS/Linux 使用绝对路径，Windows 优先使用系统自带 OpenSSH。
 #[cfg(unix)]
 pub fn ssh() -> PathBuf {
@@ -88,7 +129,7 @@ pub fn open_url(url: &str) -> Result<(), String> {
 #[cfg(windows)]
 pub fn open_url(url: &str) -> Result<(), String> {
     // 空标题参数避免 start 把带引号的 URL 当作窗口标题。
-    std::process::Command::new("cmd")
+    background_command("cmd")
         .args(["/C", "start", "", url])
         .spawn()
         .map_err(|e| e.to_string())?;
@@ -166,7 +207,7 @@ pub fn lan_addresses() -> Result<Vec<String>, String> {
 
 #[cfg(windows)]
 pub fn lan_addresses() -> Result<Vec<String>, String> {
-    let output = std::process::Command::new("ipconfig")
+    let output = background_command("ipconfig")
         .output()
         .map_err(|e| e.to_string())?;
     if !output.status.success() {

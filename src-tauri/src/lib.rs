@@ -212,7 +212,7 @@ async fn scan_host(s: State<'_, AppState>) -> Result<String> {
     if c.host.is_empty() {
         return Err("请先保存服务器地址".into());
     }
-    let output = tokio::process::Command::new(platform::ssh_keyscan())
+    let output = platform::background_async_command(platform::ssh_keyscan())
         .args([
             "-T",
             "5",
@@ -230,7 +230,7 @@ async fn scan_host(s: State<'_, AppState>) -> Result<String> {
         return Err("未获得主机公钥".into());
     }
     *s.pending_host.lock().unwrap() = Some(text.clone());
-    let mut child = tokio::process::Command::new(platform::ssh_keygen())
+    let mut child = platform::background_async_command(platform::ssh_keygen())
         .args(["-lf", "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())

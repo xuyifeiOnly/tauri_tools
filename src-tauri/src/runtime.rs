@@ -6,7 +6,6 @@ use std::{
 };
 use tokio::{
     io::AsyncReadExt,
-    process::Command,
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
@@ -159,7 +158,7 @@ impl Runtime {
                     "重连中"
                 }
                 .into();
-                let mut cmd = Command::new(&program);
+                let mut cmd = crate::platform::background_async_command(&program);
                 cmd.kill_on_drop(true)
                     .args(["-F", crate::platform::ssh_config_null(), "-N", "-T", "-p"])
                     .arg(c.ssh_port.to_string())
@@ -236,8 +235,9 @@ impl Runtime {
                                     return result;
                                 }
                                 exit = child.wait() => {
-                                    exit.map_err(|e| format!("等待SSH进程失败：{e}"))?;
-                                    break reader.await.unwrap_or_default();
+                                    let exit = exit.map_err(|e| format!("等待SSH进程失败：{e}"))?;
+                                    let errors = reader.await.unwrap_or_default();
+                                    break format!("SSH进程退出（{exit}）：{}", errors.trim());
                                 }
                                 (reachable, reply) = scheduled_probe(&c, &instance, &mut checks, next_check) => {
                                     let mut s = status.lock().unwrap();
@@ -255,6 +255,12 @@ impl Runtime {
                             s.logs.drain(..50);
                         }
                         s.logs.push(errors.chars().take(2000).collect());
+                        if errors.contains("remote port forwarding failed") {
+                            s.logs.push(format!(
+                                "服务器转发端口 {} 绑定失败：可能已被另一台电脑或旧隧道占用。每台设备应使用独立转发端口，并匹配服务端代理配置。不会自动停止其他设备。",
+                                c.remote_port
+                            ));
+                        }
                         if errors.contains("REMOTE HOST IDENTIFICATION HAS CHANGED")
                             || errors.contains("Host key verification failed")
                         {
@@ -453,6 +459,36 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
         assert!(!dir.path().join("pid").exists());
         assert_eq!(runtime.status.lock().unwrap().tunnel, "停止");
+    }
+
+    #[tokio::test]
+    async fn ssh_exit_code_and_forwarding_error_are_logged() {
+        let (_dir, _, mut runtime, _) = fake_connection(
+            "echo 'remote port forwarding failed for listen port 18790' >&2; exit 255",
+        )
+        .await;
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            loop {
+                if runtime
+                    .status
+                    .lock()
+                    .unwrap()
+                    .logs
+                    .iter()
+                    .any(|line| line.contains("绑定失败"))
+                {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        let logs = runtime.status.lock().unwrap().logs.join("\n");
+        assert!(logs.contains("255"));
+        assert!(logs.contains("remote port forwarding failed"));
+        assert!(logs.contains("另一台电脑"));
+        runtime.stop().await.unwrap();
     }
 
     #[tokio::test]
