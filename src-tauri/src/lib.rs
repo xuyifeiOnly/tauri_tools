@@ -257,8 +257,20 @@ fn trust_host(s: State<AppState>) -> Result<()> {
         .ok_or("请先读取指纹")?;
     std::fs::write(s.data.join("known_hosts"), text).map_err(|e| e.to_string())
 }
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
+        // 必须先于其他插件和 setup，阻止第二实例初始化配置、托盘及服务。
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app);
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .setup(|app| {
@@ -291,10 +303,7 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(app);
                     }
                     "quit" => {
                         app.exit(0);
@@ -332,6 +341,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("启动随享失败")
         .run(|app, event| {
+            // macOS 点击 Dock 图标通常发送 Reopen，而不是启动第二个进程。
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = &event {
+                show_main_window(app);
+            }
             if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
                 if app.state::<AppState>().exit_ready.load(Ordering::SeqCst) {
                     return;

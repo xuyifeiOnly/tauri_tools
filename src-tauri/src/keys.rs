@@ -67,6 +67,7 @@ mod tests {
     fn generated_key_can_be_used_for_deployment() {
         let dir = tempfile::tempdir().unwrap();
         let key = create(dir.path(), None).unwrap();
+        assert!(key.public_key.ends_with(" suixiang-xyf-key"));
         assert!(crate::config::segment(&key.id));
         let loaded = inspect(dir.path(), &key.id).unwrap();
         assert_eq!(loaded.public_key, key.public_key);
@@ -93,7 +94,7 @@ pub fn create(dir: &Path, source: Option<String>) -> Result<KeyInfo, String> {
         std::fs::copy(source, &p).map_err(|e| e.to_string())?;
     } else {
         let o = crate::platform::background_command(crate::platform::ssh_keygen())
-            .args(["-t", "ed25519", "-N", "", "-C", "mac-tunnel", "-f"])
+            .args(["-t", "ed25519", "-N", "", "-C", "suixiang-xyf-key", "-f"])
             .arg(&p)
             .output()
             .map_err(|e| e.to_string())?;

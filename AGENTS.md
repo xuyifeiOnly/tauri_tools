@@ -24,6 +24,8 @@
 
 ## 当前已实现的主体功能
 
+- 新生成 SSH 密钥的 `-C` 注释改为 `suixiang-xyf-key`；已有/导入密钥不改。临时生成密钥测试验证公钥注释通过，需重新构建安装生效。
+
 - 共享工作台优化（源码，未安装）：概览按本地、SSH、公网展示下一步；连接配置先本地，再可选公网与高级设置。目录先选本地路径，地址按本机、局域网、公网区分，共用已保存快照与 `shareBlockReason`/`fileLink`。无变化保存不停止服务；运行中保存配置或密码明确提示会停止共享，完成后可手动重新启动本地服务。相关旧版按钮位置以此条和 README 新章节为准。
 
 - 连接表单修复长密钥select的隐式grid最小宽度：fields标签列minmax(0,1fr)、控件限宽。scroll-region仅纵向auto、不预留空滚动槽，6px安全内边距；输入/select焦点为主题色2px外框+1px偏移，避免裁边。连接表单压缩间距并移除空反馈占位；矮窗口后台运行仍需纵向滚动，禁止一律隐藏。Ego亮暗/长选项/1200×707及1000×700无横溢出、1200×1000无滚动通过；尚未安装原生验收。
@@ -57,6 +59,10 @@
 - 应用图标为“文件夹向外连接”图形，SVG 源稿生成 macOS PNG/ICNS；侧栏、菜单栏及应用包使用同一设计。
 
 ### 重要运行语义
+
+- macOS Dock点击由RunEvent::Reopen调用show_main_window恢复已有窗口（含隐藏/最小化），不同于第二进程的single-instance回调。仅源码编译及串行Rust26项通过，未安装/原生点击验收；并发全套再次出现既有监听端口重绑AddrInUse，串行全通过，保留未定原因。
+
+- Builder首个插件为tauri-plugin-single-instance（2.5.5），在setup前阻止重复实例；回调及托盘打开复用show_main_window(show/unminimize/set_focus)。应用单实例，不禁止WebView/SSH合法子进程，不扫描/强杀旧版本进程；升级前需正常退出旧实例。macOS Rust26项、bun18项及构建通过；Windows实机多开/隐藏/最小化唤起未验收。
 
 - Windows 子进程统一通过 platform::background_command/background_async_command 设置 CREATE_NO_WINDOW 和默认 stdin null，覆盖 SSH、keygen/keyscan、ipconfig、打开地址 cmd；扫描指纹管道显式覆盖 stdin。SSH 退出记录退出码，远端转发失败提示多设备端口冲突，不自动停止其他设备。macOS Rust26项、bun15项及构建通过；Windows专属两项进程回归接入构建工作流，尚未在Windows执行，不宣称断线根因或原生弹窗验收完成。
 

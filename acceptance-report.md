@@ -4,6 +4,19 @@
 
 ## 已验证
 
+### macOS Dock 恢复窗口（2026-11-26，源码）
+
+- 补充macOS `RunEvent::Reopen`调用show_main_window，对Dock重新打开恢复隐藏/最小化窗口并聚焦；不新建窗口或重启共享。此前仅处理托盘打开与单实例第二进程，缺少此事件。
+- 编译通过；并发Rust全套25通过/1失败，既有stop_releases_local_listener_before_returning出现AddrInUse；串行重跑26项全通过，未修改该测试掩盖问题。cargo fmt及diff检查通过。未安装或原生Dock点击验收，不宣称已复现/彻底解决用户所有打不开场景。
+
+### 应用单实例与已有窗口唤起（2026-11-26，源码）
+
+- 新增官方tauri-plugin-single-instance并作为Builder第一个插件注册，重复启动时唤起已有窗口，不再初始化第二套配置、托盘、运行时；show_main_window统一show/unminimize/set_focus并供托盘复用。
+- `cargo test`26项、`bun test`18项63条断言、`bun run build`类型检查/构建通过，cargo fmt完成；Cargo.lock保留原有版本修改并新增插件依赖。
+- 未执行原生重复启动/并发启动/隐藏或最小化唤起、Windows安装与退出重启验收。未打包安装或操作当前实例；旧版本已启动的多实例不会自动回收，首次升级须正常退出旧实例。WebView与SSH合法子进程不属于重复客户端。
+
+- 2026-11-26：新生成密钥注释改为 `suixiang-xyf-key`；`cargo test --manifest-path src-tauri/Cargo.toml keys::tests::generated_key_can_be_used_for_deployment` 通过，断言生成公钥的注释并验证部署兼容。未修改已有密钥，未打包安装。
+
 ### 独立 TypeScript 版本同步脚本（2026-11-26）
 
 - 新增 `scripts/bump-version.ts` / `bun run version:bump`：默认patch+1，支持显式稳定版、预览、跨工作目录路径解析。先校验三处再写入，保持其余格式与依赖；写入失败尝试恢复本次已写文件。不打包安装或发布，Cargo.lock留待Cargo更新。
