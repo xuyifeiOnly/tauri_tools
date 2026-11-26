@@ -82,12 +82,37 @@ jobs:
           # ditto 保留 .app 的符号链接与可执行权限。
           ditto -c -k --sequesterRsrc --keepParent "随享.app" "随享-macos.zip"
 
+      - name: Package Windows installer as ZIP
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installers = @(Get-ChildItem 'src-tauri/target/release/bundle/nsis/*.exe' -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one NSIS installer, found $($installers.Count)"
+          }
+          $installer = $installers[0]
+          $archive = Join-Path $installer.DirectoryName "suixiang_$($env:RELEASE_VERSION)_windows_x64.zip"
+          Compress-Archive -LiteralPath $installer.FullName -DestinationPath $archive
+          # 解压回读并校验哈希，避免上传缺失或内容变化的安装程序。
+          $checkDir = Join-Path $env:RUNNER_TEMP "installer-zip-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          Expand-Archive -LiteralPath $archive -DestinationPath $checkDir
+          $extracted = @(Get-ChildItem $checkDir -File -Recurse)
+          if ($extracted.Count -ne 1 -or $extracted[0].Name -ne $installer.Name) {
+            throw 'ZIP must contain exactly the original installer'
+          }
+          if ((Get-FileHash $installer.FullName).Hash -ne (Get-FileHash $extracted[0].FullName).Hash) {
+            throw 'Installer ZIP integrity check failed'
+          }
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
-            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.zip
             src-tauri/target/release/bundle/macos/*.zip
           if-no-files-found: error
 
@@ -105,15 +130,13 @@ jobs:
 
       - name: Verify artifacts
         run: |
-          if [ -z "$(find artifacts -type f -print -quit)" ]; then
-            echo "没有可发布的安装包，已中止" >&2
-            exit 1
-          fi
+          test -n "$(find artifacts/suixiang-windows -type f -name '*.zip' -print -quit)"
+          test -n "$(find artifacts/suixiang-macos -type f -name '*.zip' -print -quit)"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ needs.prepare.outputs.sha }}
-          files: artifacts/**/*
+          files: artifacts/**/*.zip
           fail_on_unmatched_files: true

@@ -4,6 +4,17 @@
 
 ## 已验证
 
+### 独立 TypeScript 版本同步脚本（2026-11-26）
+
+- 新增 `scripts/bump-version.ts` / `bun run version:bump`：默认patch+1，支持显式稳定版、预览、跨工作目录路径解析。先校验三处再写入，保持其余格式与依赖；写入失败尝试恢复本次已写文件。不打包安装或发布，Cargo.lock留待Cargo更新。
+- `bun test`18项63条断言、`bun run build`类型检查/构建、`git diff --check`通过；真实仓库仅执行dry-run，输出0.1.2→0.1.3，未修改实际版本。未执行打包、安装或远端发布。
+
+### Windows 安装包 ZIP 分发（2026-11-26，源码）
+
+- Windows NSIS 构建后使用 PowerShell Compress-Archive 生成 `suixiang_<版本>_windows_x64.zip`，内含唯一原始 exe；自动解压回读验证文件数量/名称与 SHA-256，再上传 artifact。Release 只上传 ZIP，检查双平台 ZIP 均存在；macOS 打包不变。
+- 本地验证：工作流 YAML 解析、ZIP 上传配置/校验步骤静态检查、`git diff --check` 通过；`bun test`15项55条断言、`bun run build`类型检查及构建通过。未在本机执行Windows PowerShell归档步骤。
+- 不自动删除已有 Release 的历史 exe，不改版本，不推送或实际发布。ZIP 是安装程序包装而非便携版，也不能据此宣称已修复此前“损坏”问题。Windows归档和安装仍需GitHub runner/实机验收。
+
 ### Windows SSH 控制台弹出与退出诊断（2026-11-26，源码）
 
 - 确认原 SSH 启动未设置 Windows 无控制台标志；统一后台命令构造器设置 CREATE_NO_WINDOW、stdin null，覆盖异步 SSH/指纹扫描、同步密钥及 Windows 网络/打开地址工具。保留 stderr 捕获、严格主机校验、心跳和退避，不改真实服务器或现有隧道。

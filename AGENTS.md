@@ -127,6 +127,10 @@
 
 ## 构建与验证命令
 
+- 仅同步三处版本用 `bun run version:bump`（scripts/bump-version.ts），默认patch+1，支持 `--version X.Y.Z`/`--dry-run`；不打包、不安装、不发布，Cargo.lock由后续Cargo更新。已先增版再本地打包时用package.sh --keep-version避免加两次。
+
+- Windows Release 附件现为 `suixiang_<版本>_windows_x64.zip`，内含原始 NSIS exe，解压后安装，非便携版；上传前 PowerShell 解压回读并校验 SHA-256。仅上传 ZIP，不删除历史 Release 已有 exe；macOS zip不变。Windows归档实测待GitHub runner执行，不把ZIP封装当作损坏根因修复。
+
 - GitHub `.github/workflows/build.yml`：手动 Run workflow 与推送 `v*` 标签均在双平台构建成功后发布 Release（Windows exe/macOS zip），同时保留 artifact。`scripts/release-metadata.ts` 校验三处版本一致与标签匹配，手动以源码版本生成标签，不自动增版；同版本重跑更新附件但不移动已有标签。只有 release job 可写仓库。未配置签名/公证，远端构建发布尚未实测；本地 `bun test tests/release-metadata.test.ts` 回归。
 
 - `scripts/service.sh`：Linux/root非交互准备脚本，参数集中顶部，账号/可选密码/公钥预填后直接运行；禁止填入私钥或提交真实密码。默认mac-tunnel；目标配置标记存在跳过创建，已有账号无标记拒绝接管。无yes确认，无独立--check。Nginx仅输出片段，端到端验证须Mac连接后核对回环及公网健康实例标识。项目开发时不直接在真实服务器执行。`python3 scripts/test_service.py`为本地3项无部署检查，不能替代Linux/OpenSSH7.4验收。
