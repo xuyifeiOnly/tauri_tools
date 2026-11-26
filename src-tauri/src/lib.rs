@@ -4,6 +4,7 @@ mod deployment;
 mod files;
 mod image_preview;
 mod keys;
+mod listing;
 mod markdown;
 mod orphan_ssh;
 mod platform;

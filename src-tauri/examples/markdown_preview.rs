@@ -6,6 +6,8 @@ mod config;
 mod files;
 #[path = "../src/image_preview.rs"]
 mod image_preview;
+#[path = "../src/listing.rs"]
+mod listing;
 #[path = "../src/markdown.rs"]
 mod markdown;
 #[path = "../src/platform.rs"]
@@ -19,6 +21,16 @@ async fn main() {
     std::fs::write(dir.path().join("image test.svg"), image).unwrap();
     let source = format!("# 共享文档阅读预览\n\n这是 **随享** 的 Markdown 阅读页面。图片、表格和代码都在原地址直接展示。\n\n![目录示意图](image%20test.svg)\n\n## 代码高亮\n\n```rust\nfn main() {{\n    let message = \"你好，随享\";\n    println!(\"{{}}\", message);\n}}\n```\n\n```javascript\nconst image = {{ name: \"photo.png\", enabled: true }};\nconsole.log(image);\n```\n\n## 长内容与表格\n\n```unknown\n{}\n```\n\n| 功能 | 状态 | 说明 |\n| --- | --- | --- |\n| 图片 | 已支持 | 相对路径不改变 |\n| 高亮 | 已支持 | 按语言识别 |\n\n- [x] 图片渲染\n- [x] 代码高亮\n\n> 原文件保持不变，可查看源码或下载。\n", "long_code_without_wrap_".repeat(16));
     std::fs::write(dir.path().join("测试.md"), source).unwrap();
+    std::fs::create_dir(dir.path().join("images")).unwrap();
+    std::fs::create_dir(dir.path().join("空目录 & 中文")).unwrap();
+    std::fs::write(dir.path().join("images/photo.svg"), image).unwrap();
+    std::fs::write(dir.path().join("1101.pdf"), "PDF fixture").unwrap();
+    std::fs::write(
+        dir.path()
+            .join(format!("{}说明.md", "超长文件名".repeat(15))),
+        "# 长文件名",
+    )
+    .unwrap();
     let mut c = config::Config::default();
     c.mappings.push(config::Mapping {
         id: "fixture".into(),
@@ -32,6 +44,12 @@ async fn main() {
         username: "".into(),
         password_hash: "".into(),
     });
+    let mut locked = c.mappings[0].clone();
+    locked.id = "locked".into();
+    locked.route = "library".into();
+    locked.name = "本机图库".into();
+    locked.password_hash = "fixture-protected".into();
+    c.mappings.push(locked);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     println!(
         "PREVIEW_URL=http://{}/my_mac/docs/%E6%B5%8B%E8%AF%95.md",

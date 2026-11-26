@@ -4,6 +4,14 @@
 
 ## 已验证
 
+### 共享目录方案A（2026-11-26，源码未安装）
+
+- 新增`src-tauri/src/listing.rs`、`listing.css`，共享首页/文件列表统一紧凑蓝灰样式；彩色SVG类型图标、类型与大小、目录优先、面包屑/返回上级、访问保护与空态。内置CSS无CDN/脚本；不展示磁盘路径、不修改共享文件。手机隐藏类型列但保留密码标记；长文件名完整换行。
+- Rust串行37项通过（新增排序/转义/大小及HTTP导航/前缀/编码/空态/隐藏文件/权限/HEAD/index回归），bun18项63断言、前端类型检查与构建通过。
+- Ego Lite TaskSpace4/p1，独立临时fixture `http://127.0.0.1:51275/my_mac/`：点击首页→docs→images→返回→Markdown通过；中文含&空目录进入与返回首页通过。桌面1200×707亮暗及390×844暗色列表/亮色首页目视检查；手机scrollWidth=innerWidth=390，长名无横溢出，密码标记可见，Tab可聚焦链接。
+- 证据目录`/private/var/folders/gx/qmlmrzyn4kb33r1zm1bzkwbw0000gn/T/opencode/`：`share-home-light.png`、`share-files-light.png`、`share-files-dark.png`、`share-files-mobile.png`、`share-empty-mobile.png`、`share-home-mobile.png`。导航后设备模拟会重置，最终手机首页已重新设390px并核对。TaskSpace已finish，测试服务PID77413已SIGINT正常停止。
+- 未覆盖：浏览器原生密码弹窗、真实公网/跨设备LAN、Windows实机、当前20005安装服务；权限与index由HTTP回归覆盖，不宣称原生/公网验收。未打包安装、增版、推送或服务器变更；既有safe_path TOCTOU仍未解决。
+
 ### TIFF 图片自动转换（2026-11-26，源码）
 
 - 原问题：实际`ceshi.md`引用`./images/image.tiff`，原服务200/image-tiff，但Chromium无法解码、naturalWidth=0；非路径错误。

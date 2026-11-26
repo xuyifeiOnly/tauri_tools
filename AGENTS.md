@@ -24,6 +24,8 @@
 
 ## 当前已实现的主体功能
 
+- 浏览器共享目录样式（源码，未安装）：`listing.rs/listing.css`服务端统一首页/目录列表，蓝灰系统字体、彩色SVG、类型/大小、目录优先、前缀保留的面包屑/返回、空态、亮暗/手机适配；手机密码标记保留，长名完整换行。files.rs沿用安全筛选与认证/LAN/index优先；列表HTML加CSP/no-store/nosniff，无脚本/CDN。Rust串行37项、bun18项与构建通过；Ego TaskSpace4独立临时fixture验收首页→子目录→返回/Markdown、空态和桌面/390px，无横溢出；已finish/停止测试服务，未替换20005。
+
 - TIFF 兼容（源码，未安装）：`image_preview.rs`通过image(TIFF/PNG)将本地`.tif/.tiff`默认转PNG第一帧；files.rs既有路径/认证/LAN校验后分派，无需改Markdown。raw=1原字节/download=1原图附件保留Range，预览忽略Range/HEAD空正文。16MiB输入、8192宽高/16M像素、128MiB库解码预算（非硬进程上限）、2个并发忙时503，损坏422/超限413，无远程代理/缓存/落盘。Ego独立回环端口只读验证用户ceshi.md的image.tiff正常655×312；20005安装服务未替换。example可显式传只读共享目录参数。
 
 - Markdown 预览（源码，未安装）：`files.rs` 在既有路径/认证/LAN 校验后，将 `.md/.markdown` 默认交给 `markdown.rs` 服务端渲染，样式 `markdown.css`；pulldown-cmark + syntect(default-fancy) + ammonia，无 CDN/脚本。支持标准 Markdown 图片、表格/任务列表/删除线、代码高亮；移除原始 HTML，允许 HTTP/HTTPS 图片，保留相对链接和公网前缀。`?raw=1` 文本、`?download=1` 原文件下载均沿用 ServeFile/Range；预览不按原文件 Range 截取。有界读取2MiB、UTF-8检查；代码块>64KiB降级普通代码。独立 example `markdown_preview` 使用临时目录/随机回环端口，无SSH。Ego图片加载/多色高亮/源码/下载/亮色桌面及390px暗色手机通过，未更新20005当前安装服务，未真实公网验收。

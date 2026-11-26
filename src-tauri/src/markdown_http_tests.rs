@@ -1,6 +1,62 @@
 use super::*;
 
 #[tokio::test]
+async fn styled_listing_navigation_encoding_empty_and_permissions() {
+    let d = tempfile::tempdir().unwrap();
+    std::fs::create_dir(d.path().join("子 & 目录")).unwrap();
+    std::fs::write(d.path().join("a #<x>.md"), "# hello").unwrap();
+    std::fs::write(d.path().join(".hidden"), "secret").unwrap();
+    let mut c = config(d.path());
+    let mut locked = c.mappings[0].clone();
+    locked.id = "locked".into();
+    locked.route = "locked".into();
+    locked.name = "保护目录".into();
+    locked.password_hash = "invalid".into();
+    c.mappings.push(locked);
+    for prefix in ["", "/my_mac"] {
+        let root = text(request(c.clone(), &format!("{prefix}/"), "GET", false, false).await).await;
+        assert!(root.contains("密码保护"));
+        assert!(root.contains("class=\"browser\""));
+        assert!(root.contains(&format!("href=\"{prefix}/docs/\"")));
+        let listing =
+            text(request(c.clone(), &format!("{prefix}/docs/"), "GET", false, false).await).await;
+        assert!(listing.find("子 &amp; 目录").unwrap() < listing.find("a #&lt;x&gt;.md").unwrap());
+        assert!(listing.contains("./a%20%23%3Cx%3E%2Emd"));
+        assert!(!listing.contains(".hidden"));
+        assert!(!listing.contains(&d.path().to_string_lossy().to_string()));
+        let sub = text(
+            request(
+                c.clone(),
+                &format!("{prefix}/docs/%E5%AD%90%20%26%20%E7%9B%AE%E5%BD%95/"),
+                "GET",
+                false,
+                false,
+            )
+            .await,
+        )
+        .await;
+        assert!(sub.contains("此目录为空"));
+        assert!(sub.contains(&format!("href=\"{prefix}/docs/\"")));
+        let r = request(c.clone(), &format!("{prefix}/docs/"), "HEAD", false, false).await;
+        assert!(r.headers().contains_key(header::CONTENT_SECURITY_POLICY));
+        assert_eq!(text(r).await, "");
+        assert_eq!(
+            request(c.clone(), &format!("{prefix}/locked/"), "GET", false, false)
+                .await
+                .status(),
+            401
+        );
+    }
+    let lan = text(request(c.clone(), "/", "GET", false, true).await).await;
+    assert!(lan.contains("暂无共享目录"));
+    assert!(!lan.contains("保护目录"));
+    std::fs::write(d.path().join("index.html"), "user index").unwrap();
+    let r = request(c, "/docs/", "GET", false, false).await;
+    assert!(!r.headers().contains_key(header::CONTENT_SECURITY_POLICY));
+    assert_eq!(text(r).await, "user index");
+}
+
+#[tokio::test]
 async fn tiff_preview_preserves_original_permissions_and_range() {
     let d = tempfile::tempdir().unwrap();
     let mut original = std::io::Cursor::new(Vec::new());

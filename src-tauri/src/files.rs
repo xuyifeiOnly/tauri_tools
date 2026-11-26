@@ -133,6 +133,11 @@ fn html(body: String, head: bool) -> Response {
         header::CONTENT_TYPE,
         "text/html; charset=utf-8".parse().unwrap(),
     );
+    r.headers_mut()
+        .insert(header::CACHE_CONTROL, "no-store".parse().unwrap());
+    r.headers_mut()
+        .insert(header::X_CONTENT_TYPE_OPTIONS, "nosniff".parse().unwrap());
+    r.headers_mut().insert(header::CONTENT_SECURITY_POLICY, "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'".parse().unwrap());
     r
 }
 pub fn router(c: Config, instance: String) -> Router {
@@ -172,24 +177,33 @@ async fn deliver(State(state): State<Arc<(Config, String)>>, r: Request) -> Resp
             .into_response();
     }
     if local == "/" {
-        let links = c
+        let home = if raw == c.base_path || raw.starts_with(&(c.base_path.clone() + "/")) {
+            format!("{}/", c.base_path)
+        } else {
+            "/".into()
+        };
+        let entries = c
             .mappings
             .iter()
             .filter(|m| m.enabled && (!lan || m.allow_lan))
-            .map(|m| {
-                format!(
-                    "<li><a href=\"./{}/\">{}</a>{}</li>",
-                    m.route,
-                    escape(&m.name),
-                    if m.password_hash.is_empty() {
-                        ""
-                    } else {
-                        " · 密码保护"
-                    }
-                )
+            .map(|m| crate::listing::Entry {
+                name: m.name.clone(),
+                href: format!("{home}{}/", crate::listing::encoded(&m.route)),
+                directory: true,
+                size: None,
+                protected: !m.password_hash.is_empty(),
             })
-            .collect::<String>();
-        return html(format!("<!doctype html><meta charset=utf-8><title>随享</title><h1>共享目录</h1><ul>{links}</ul>"),head);
+            .collect();
+        return html(
+            crate::listing::render(
+                "共享目录",
+                &[("共享目录".into(), home)],
+                None,
+                entries,
+                true,
+            ),
+            head,
+        );
     }
     let decoded = match percent_encoding::percent_decode_str(local).decode_utf8() {
         Ok(p) => p,
@@ -236,32 +250,53 @@ async fn deliver(State(state): State<Arc<(Config, String)>>, r: Request) -> Resp
             let Ok(entries) = std::fs::read_dir(&path) else {
                 return StatusCode::FORBIDDEN.into_response();
             };
-            let mut links = vec![];
+            let mut items = vec![];
             for e in entries.flatten() {
                 let name = e.file_name().to_string_lossy().into_owned();
                 if safe_path(&path, &name).is_err() {
                     continue;
                 }
-                let suffix = if e.path().is_dir() { "/" } else { "" };
-                links.push(format!(
-                    "<li><a href=\"./{}{}\">{}{}</a></li>",
-                    percent_encoding::utf8_percent_encode(
-                        &name,
-                        percent_encoding::NON_ALPHANUMERIC
+                let Ok(metadata) = e.metadata() else {
+                    continue;
+                };
+                if !metadata.is_dir() && !metadata.is_file() {
+                    continue;
+                }
+                let directory = metadata.is_dir();
+                items.push(crate::listing::Entry {
+                    href: format!(
+                        "./{}{}",
+                        crate::listing::encoded(&name),
+                        if directory { "/" } else { "" }
                     ),
-                    suffix,
-                    escape(&name),
-                    suffix
-                ))
+                    name,
+                    directory,
+                    size: (!directory).then_some(metadata.len()),
+                    protected: false,
+                });
             }
-            links.sort();
-            return html(
-                format!(
-                    "<!doctype html><meta charset=utf-8><title>{}</title><h1>{}</h1><ul>{}</ul>",
-                    escape(&m.name),
-                    escape(&m.name),
-                    links.join("")
+            let home = if raw.starts_with(&(c.base_path.clone() + "/")) {
+                format!("{}/", c.base_path)
+            } else {
+                "/".into()
+            };
+            let mut crumbs = vec![
+                ("共享目录".into(), home.clone()),
+                (
+                    m.name.clone(),
+                    format!("{home}{}/", crate::listing::encoded(&m.route)),
                 ),
+            ];
+            let mut current = crumbs.last().unwrap().1.clone();
+            for part in relative.split('/').filter(|p| !p.is_empty()) {
+                current.push_str(&crate::listing::encoded(part));
+                current.push('/');
+                crumbs.push((part.into(), current.clone()));
+            }
+            let title = crumbs.last().unwrap().0.clone();
+            let parent = crumbs[crumbs.len() - 2].1.clone();
+            return html(
+                crate::listing::render(&title, &crumbs, Some(&parent), items, false),
                 head,
             );
         }
